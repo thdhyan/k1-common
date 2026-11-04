@@ -4,10 +4,16 @@ version = "0.1.0"
 description = "Robot contract: joints, gains, obs/action layout, wiring, motion-clip schema."
 requires-python = ">=3.10"
 dependencies = [
-  "mujoco",
+  "k1-description",
   "numpy",
-  "pytest",
 ]
+
+[project.optional-dependencies]
+mujoco = ["mujoco"]  # clip_schema.verify_joint_order
+test = ["pytest", "mujoco"]
+
+[tool.uv.sources]
+k1-description = { git = "https://github.com/thdhyan/k1-description" }
 
 [build-system]
 requires = ["hatchling"]
@@ -16,5 +22,4 @@ build-backend = "hatchling.build"
 [tool.hatch.build.targets.wheel]
 packages = ["src/k1_common"]
 
-# Provided by the environment (ROS 2, Isaac Sim/Lab, mjlab, robot SDK) or not on PyPI under this name:
-# mjlab, pxr
+# Provided by the environment: pxr (USD tests only)

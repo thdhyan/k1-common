@@ -4,6 +4,7 @@ Run: uv run --no-project --with pytest --with usd-core pytest tests/test_k1_wiri
 (the USD test is skipped if pxr is not importable).
 """
 import math
+import os
 import re
 import sys
 import xml.etree.ElementTree as ET
@@ -11,13 +12,17 @@ from pathlib import Path
 
 import pytest
 
-ROOT = Path(__file__).resolve().parents[1]
+import k1_description
 from k1_common import k1_wiring as w  # noqa: E402
 
-K1 = ROOT / "src/k1_description/assets/robots/K1"
-URDFS = ["K1_22dof.urdf", "K1_22dof-ZED.urdf"]
-MJCF = K1 / "K1_22dof.xml"
-SDK_HDR = ROOT / "sdk/booster_robotics_sdk/include/booster/robot/b1/b1_api_const.hpp"
+K1 = k1_description.robot_file(k1_description.URDF).parent
+URDFS = [k1_description.URDF, k1_description.URDF_ZED]
+MJCF = K1 / k1_description.MJCF
+# Booster SDK checkout (github.com/BoosterRobotics/booster_robotics_sdk); the
+# deploy-laptop repo carries it as sdk/booster_robotics_sdk.
+_SDK = Path(os.environ.get("BOOSTER_SDK_ROOT") or
+            Path(__file__).resolve().parents[2] / "k1-deploy-laptop/sdk/booster_robotics_sdk")
+SDK_HDR = _SDK / "include/booster/robot/b1/b1_api_const.hpp"
 
 
 def _urdf(name):
@@ -69,6 +74,7 @@ def test_mjcf_joints_actuators_armature():
                 assert float(j.get("armature")) == pytest.approx(exp, rel=1e-3), n
 
 
+@pytest.mark.skipif(not SDK_HDR.exists(), reason=f"Booster SDK header not found: {SDK_HDR} (set BOOSTER_SDK_ROOT)")
 def test_sdk_header_enum():
     txt = SDK_HDR.read_text()
     body = txt[txt.index("JointIndexK1"):]

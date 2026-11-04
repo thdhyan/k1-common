@@ -58,11 +58,12 @@ Booster CSV wants root quat as xyzw.
   SOMA Retargeter        : converts Euler deg -> xyzw itself
 """
 
-_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-DEFAULT_K1_URDF = os.path.join(_ROOT, "src", "k1_description", "assets",
-                               "robots", "K1", "K1_22dof.urdf")
-DEFAULT_K1_XML = os.path.join(_ROOT, "src", "k1_description", "assets",
-                              "robots", "K1", "K1_22dof.xml")
+
+
+def _default_model(name: str) -> str:
+    """Model path from k1_description (imported lazily: CSV I/O needs no assets)."""
+    import k1_description
+    return str(k1_description.robot_file(getattr(k1_description, name)))
 
 
 def as_matrix(arr) -> np.ndarray:
@@ -132,7 +133,7 @@ def validate(motion) -> dict:
             "quat_norm_max_dev": dev}
 
 
-def verify_joint_order(xml_path: str = DEFAULT_K1_XML) -> list[str]:
+def verify_joint_order(xml_path: str | None = None) -> list[str]:
     """Return the model's hinge-joint order, raising if it is not ours.
 
     Cheap insurance: a producer that emits joints in a different order yields
@@ -140,6 +141,7 @@ def verify_joint_order(xml_path: str = DEFAULT_K1_XML) -> list[str]:
     worth failing loudly on.
     """
     import mujoco as mj
+    xml_path = xml_path or _default_model("MJCF")
     if not os.path.exists(xml_path):
         raise FileNotFoundError(f"K1 MJCF not found: {xml_path}")
     m = mj.MjModel.from_xml_path(xml_path)
@@ -156,9 +158,10 @@ def verify_joint_order(xml_path: str = DEFAULT_K1_XML) -> list[str]:
     return hinges
 
 
-def joint_limits_from_urdf(urdf_path: str = DEFAULT_K1_URDF) -> dict:
+def joint_limits_from_urdf(urdf_path: str | None = None) -> dict:
     """Parse per-joint position limits from the K1 URDF (no ROS needed)."""
     import xml.etree.ElementTree as ET
+    urdf_path = urdf_path or _default_model("URDF")
     root = ET.parse(urdf_path).getroot()
     lim: dict[str, tuple[float, float]] = {}
     for j in root.iter("joint"):
